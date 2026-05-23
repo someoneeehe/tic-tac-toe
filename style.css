@@ -1,51 +1,128 @@
 @import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
+/* ── CSS variables ── */
+:root {
+    --bg: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --text: #111111;
+    --text-muted: #555555;
+    --border: #111111;
+    --nav-bg: blueviolet;
+    --lb-bg: #f9f7ff;
+    --lb-border: #d6caff;
+    --box-hover: #eeeeee;
+    --btn-secondary-bg: #eeeeee;
+    --btn-secondary-color: #333333;
+    --input-border: #cccccc;
+    --win-line: #22c55e;
+}
+
+body.dark {
+    --bg: #111111;
+    --bg-secondary: #1e1e1e;
+    --text: #f1f1f1;
+    --text-muted: #aaaaaa;
+    --border: #f1f1f1;
+    --nav-bg: #3d0080;
+    --lb-bg: #1a1030;
+    --lb-border: #4a3a7a;
+    --box-hover: #2a2a2a;
+    --btn-secondary-bg: #2a2a2a;
+    --btn-secondary-color: #dddddd;
+    --input-border: #444444;
+    --win-line: #22c55e;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    transition: background 0.3s, color 0.3s;
+}
+
+/* ── Nav ── */
 nav {
-    background-color: blueviolet;
+    background-color: var(--nav-bg);
     color: white;
     height: 65px;
     font-size: 27px;
     display: flex;
     align-items: center;
-    padding: 0 12px;
+    justify-content: space-between;
+    padding: 0 16px;
     font-family: "Exo 2", sans-serif;
+    transition: background 0.3s;
 }
-nav ul { list-style-type: none; }
 
-/* Name Screen */
+nav ul {
+    list-style-type: none;
+}
+
+#darkToggle {
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    color: white;
+    font-size: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+#darkToggle:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* ── Name Screen ── */
 .nameScreen {
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 80vh;
 }
+
 .nameCard {
-    background: #f5f5f5;
+    background: var(--bg-secondary);
     border-radius: 12px;
     padding: 40px 32px;
     display: flex;
     flex-direction: column;
     gap: 14px;
     min-width: 320px;
-    box-shadow: 0 2px 16px rgba(138,43,226,0.08);
+    border: 1px solid var(--lb-border);
 }
+
 .nameCard h2 {
     font-family: "Rubik", sans-serif;
     color: blueviolet;
     margin-bottom: 6px;
 }
+
 .nameCard input {
     padding: 10px 14px;
-    border: 1.5px solid #ccc;
+    border: 1.5px solid var(--input-border);
     border-radius: 8px;
     font-size: 1rem;
     font-family: "Rubik", sans-serif;
     outline: none;
-    transition: border 0.2s;
+    background: var(--bg);
+    color: var(--text);
+    transition: border 0.2s, background 0.3s, color 0.3s;
 }
-.nameCard input:focus { border-color: blueviolet; }
+
+.nameCard input:focus {
+    border-color: blueviolet;
+}
+
 #startBtn {
     background: blueviolet;
     color: white;
@@ -57,41 +134,94 @@ nav ul { list-style-type: none; }
     font-family: "Rubik", sans-serif;
     margin-top: 4px;
 }
-#startBtn:hover { background: darkviolet; }
 
-/* Game Layout */
+#startBtn:hover {
+    background: darkviolet;
+}
+
+/* ── Game Layout ── */
 .gameContainer {
     display: flex;
     justify-content: center;
     margin-top: 50px;
     gap: 30px;
     flex-wrap: wrap;
-    padding: 0 20px 40px;
+    padding: 0 20px 60px;
+}
+
+.board-wrap {
+    position: relative;
+    display: inline-block;
 }
 
 .container {
     display: grid;
-    grid-template-columns: repeat(3, 10vw);
-    grid-template-rows: repeat(3, 10vw);
+    grid-template-columns: repeat(3, min(10vw, 110px));
+    grid-template-rows: repeat(3, min(10vw, 110px));
     font-family: "Exo 2", sans-serif;
-    min-width: 200px;
 }
+
 .box {
-    border: 2px solid black;
-    font-size: 8vw;
+    border: 2px solid var(--border);
+    font-size: min(8vw, 88px);
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
     transition: background 0.15s;
+    position: relative;
 }
-.box:hover { background-color: lightgray; }
+
+.box:hover {
+    background-color: var(--box-hover);
+}
+
+/* ── Winning cell highlight ── */
+.box.winner {
+    background-color: rgba(34, 197, 94, 0.18);
+    animation: winPulse 0.5s ease;
+}
+
+.box.winner .boxtext {
+    color: var(--win-line);
+}
+
+@keyframes winPulse {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
+}
+
+/* ── Winning SVG line overlay ── */
+#winLine {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+#winLine line {
+    stroke: var(--win-line);
+    stroke-width: 5;
+    stroke-linecap: round;
+    stroke-dasharray: 400;
+    stroke-dashoffset: 400;
+    animation: drawLine 0.5s ease forwards;
+}
+
+@keyframes drawLine {
+    to { stroke-dashoffset: 0; }
+}
+
+/* ── Border helpers ── */
 .br-0 { border-right: 0; }
 .bl-0 { border-left: 0; }
 .bt-0 { border-top: 0; }
 .bb-0 { border-bottom: 0; }
 
-/* Game Info */
+/* ── Game Info ── */
 .gameInfo {
     font-family: "Rubik", sans-serif;
     padding: 0 10px;
@@ -100,11 +230,19 @@ nav ul { list-style-type: none; }
     gap: 12px;
     max-width: 280px;
 }
-.gameInfo h1 { font-size: 1.4rem; }
 
-.info { font-size: 1.1rem; color: #333; }
+.gameInfo h1 {
+    font-size: 1.4rem;
+    color: var(--text);
+}
 
-#reset, #changePlayers {
+.info {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+}
+
+#reset,
+#changePlayers {
     padding: 8px 18px;
     font-size: 0.95rem;
     cursor: pointer;
@@ -112,46 +250,74 @@ nav ul { list-style-type: none; }
     border-radius: 6px;
     font-family: "Rubik", sans-serif;
 }
-#reset { background: blueviolet; color: white; }
-#reset:hover { background: darkviolet; }
-#changePlayers { background: #eee; color: #333; }
-#changePlayers:hover { background: #ddd; }
 
-.imgbox { display: none; }
-.imgbox img { width: 80px; }
+#reset {
+    background: blueviolet;
+    color: white;
+}
 
-/* Leaderboard */
+#reset:hover {
+    background: darkviolet;
+}
+
+#changePlayers {
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-color);
+}
+
+#changePlayers:hover {
+    filter: brightness(0.92);
+}
+
+.imgbox {
+    display: none;
+}
+
+.imgbox img {
+    width: 80px;
+}
+
+/* ── Leaderboard ── */
 .leaderboard {
-    background: #f9f7ff;
-    border: 1.5px solid #d6caff;
+    background: var(--lb-bg);
+    border: 1.5px solid var(--lb-border);
     border-radius: 12px;
     padding: 16px;
-    margin-top: 8px;
+    margin-top: 4px;
+    transition: background 0.3s, border-color 0.3s;
 }
+
 .lb-title {
     font-size: 1rem;
     font-weight: 600;
     color: blueviolet;
     margin-bottom: 12px;
 }
+
 .lb-row {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 7px 0;
-    border-bottom: 1px solid #e8e0ff;
+    border-bottom: 1px solid var(--lb-border);
 }
-.lb-row:last-of-type { border-bottom: none; }
+
+.lb-row:last-of-type {
+    border-bottom: none;
+}
+
 .lb-rank {
     font-size: 13px;
     font-weight: 700;
     width: 20px;
     text-align: center;
-    color: #999;
+    color: var(--text-muted);
 }
+
 .lb-rank.gold   { color: #b8860b; }
-.lb-rank.silver { color: #888; }
+.lb-rank.silver { color: #888888; }
 .lb-rank.bronze { color: #a0522d; }
+
 .lb-avatar {
     width: 32px;
     height: 32px;
@@ -165,21 +331,59 @@ nav ul { list-style-type: none; }
     font-weight: 700;
     flex-shrink: 0;
 }
-.lb-name { flex: 1; font-size: 14px; color: #222; }
-.lb-wins { font-size: 13px; font-weight: 600; color: blueviolet; }
-.lb-bar-wrap { height: 3px; background: #e0d8ff; border-radius: 2px; margin-top: 2px; }
-.lb-bar { height: 3px; background: blueviolet; border-radius: 2px; transition: width 0.4s; }
-.lb-empty { font-size: 13px; color: #aaa; text-align: center; padding: 10px 0; }
+
+body.dark .lb-avatar {
+    background: #3d2080;
+    color: #cbb8ff;
+}
+
+.lb-name {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.lb-wins {
+    font-size: 13px;
+    font-weight: 600;
+    color: blueviolet;
+}
+
+.lb-bar-wrap {
+    height: 3px;
+    background: var(--lb-border);
+    border-radius: 2px;
+    margin-top: 2px;
+}
+
+.lb-bar {
+    height: 3px;
+    background: blueviolet;
+    border-radius: 2px;
+    transition: width 0.4s;
+}
+
+.lb-empty {
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 10px 0;
+}
 
 #clearLb {
     margin-top: 10px;
     background: transparent;
-    border: 1px solid #ccc;
-    color: #888;
+    border: 1px solid var(--input-border);
+    color: var(--text-muted);
     font-size: 12px;
     padding: 5px 12px;
     border-radius: 6px;
     cursor: pointer;
     font-family: "Rubik", sans-serif;
 }
-#clearLb:hover { background: #f0e8ff; color: blueviolet; border-color: blueviolet; }
+
+#clearLb:hover {
+    background: var(--lb-bg);
+    color: blueviolet;
+    border-color: blueviolet;
+}
