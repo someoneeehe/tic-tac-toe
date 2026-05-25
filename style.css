@@ -387,3 +387,74 @@ body.dark .lb-avatar {
     color: blueviolet;
     border-color: blueviolet;
 }
+
+.modeSelect {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.modeBN {
+    flex: 1;
+    padding: 8px 0;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border: 1.5px solid var(--input-border);
+    border-radius: 6px;
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-color);
+    font-family: "Rubik", sans-serif;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.modeBN.active {
+    background: blueviolet;
+    color: white;
+    border-color: blueviolet;
+    font-weight: 600;
+}
+
+body.dark .modeBN {
+    border-color: var(--input-border);
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-color);
+}
+
+.modeBtn:hover:not(.active) {
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-color);
+    border-color: var(--input-border);
+}
+
+.modeBatch {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: blueviolet;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-family: "Rubik", sans-serif;
+}
+
+.body.dark .modeBatch {
+    background: #3d0080;
+}
+
+#player0.hidden {
+    display: none;
+}
+
+.thinking {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    font-style: italic;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+

@@ -19,6 +19,11 @@
         <div class="nameCard">
             <h2>Enter Player Names</h2>
             <input type="text" id="playerX" placeholder="Player X name" maxlength="16">
+
+            <div class="modeSelect">
+                <button class="modeBN active" id="btnHuman" onclick="setMode('human')">Human vs Human</button>
+                <button class="modeBN" id="btnCPU" onclick="setMode('computer')">Human vs Computer</button>
+            </div>
             <input type="text" id="playerO" placeholder="Player O name" maxlength="16">
             <button id="startBtn">Start Game</button>
         </div>
@@ -42,6 +47,7 @@
 
         <div class="gameInfo">
             <h1>Welcome to MyTicTacToe</h1>
+            <div class="modeBadge" id="modeBadge">Human vs Human</div>
             <span class="info" id="info">Turn for X</span>
             <button id="reset">Reset</button>
             <button id="changePlayers">Change Players</button>
