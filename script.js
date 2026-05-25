@@ -1,3 +1,4 @@
+// ── Firebase Database ──────────────────────────────────────────
 const db = firebase.database();
 
 // ── DOM refs ───────────────────────────────────────────────────
@@ -21,15 +22,16 @@ const roomDisplay     = document.getElementById("roomDisplay");
 const roomCodeDisplay = document.getElementById("roomCodeDisplay");
 
 // ── State ──────────────────────────────────────────────────────
-let turn     = "X";
-let board    = ["","","","","","","","",""];
-let gameOver = false;
-let playerX  = "Player X";
-let playerO  = "Player O";
-let mode     = "human";
-let mySymbol = "";
-let roomCode = "";
-let gameRef  = null;
+let turn        = "X";
+let board       = ["","","","","","","","",""];
+let gameOver    = false;
+let playerX     = "Player X";
+let playerO     = "Player O";
+let mode        = "human";
+let mySymbol    = "";
+let roomCode    = "";
+let gameRef     = null;
+let isListening = false;
 
 const winPatterns = [
     [0,1,2],[3,4,5],[6,7,8],
@@ -54,7 +56,6 @@ function setMode(m) {
     document.getElementById("btnHuman").classList.toggle("active", m === "human");
     document.getElementById("btnCPU").classList.toggle("active", m === "computer");
     document.getElementById("btnOnline").classList.toggle("active", m === "online");
-
     playerOInput.style.display  = m === "human"  ? "block" : "none";
     onlineOptions.style.display = m === "online" ? "flex"  : "none";
     startBtn.style.display      = m === "online" ? "none"  : "block";
@@ -66,38 +67,64 @@ function generateCode() {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
+// ── Render Board from array ────────────────────────────────────
+// This redraws every cell from a board array
+function renderBoard(b) {
+    boxes.forEach((box, i) => {
+        const span = box.querySelector(".boxtext");
+        span.innerText = b[i] || "";
+        box.classList.remove("winner");
+    });
+    const old = document.getElementById("winLine");
+    if (old) old.remove();
+}
+
 // ── Create Room ────────────────────────────────────────────────
 async function createRoom() {
     const name = document.getElementById("playerX").value.trim() || "Player X";
     roomCode   = generateCode();
-    gameRef    = db.ref("games/" + roomCode);
     mySymbol   = "X";
     playerX    = name;
+    playerO    = "Opponent";
 
-    await gameRef.set({
-        board:   ["","","","","","","","",""],
-        turn:    "X",
-        playerX: name,
-        playerO: "",
-        status:  "waiting"
-    });
+    // stop any old listener
+    if (gameRef) gameRef.off();
+
+    gameRef = db.ref("games/" + roomCode);
+
+    try {
+        await gameRef.set({
+            board:      ["","","","","","","","",""],
+            turn:       "X",
+            playerX:    name,
+            playerO:    "",
+            status:     "waiting",
+            winPattern: null,
+            winner:     null
+        });
+        console.log("Room created:", roomCode);
+    } catch(e) {
+        alert("Firebase error: " + e.message);
+        return;
+    }
 
     roomDisplay.style.display   = "block";
     roomCodeDisplay.textContent = roomCode;
     onlineOptions.style.display = "none";
 
     roomCodeDisplay.onclick = () => {
-        navigator.clipboard.writeText(roomCode);
+        navigator.clipboard.writeText(roomCode).catch(() => {});
         roomCodeDisplay.textContent = "Copied!";
         setTimeout(() => roomCodeDisplay.textContent = roomCode, 1500);
     };
 
+    // wait for opponent
     gameRef.on("value", snap => {
         const data = snap.val();
         if (!data) return;
-        if (data.status === "playing") {
-            playerO = data.playerO;
-            startOnlineGame();
+        if (data.status === "playing" && !isListening) {
+            playerO = data.playerO || "Opponent";
+            launchOnlineGame();
         }
     });
 }
@@ -109,25 +136,50 @@ async function joinRoom() {
 
     if (!code) { alert("Enter a room code!"); return; }
 
+    // stop any old listener
+    if (gameRef) gameRef.off();
+
     gameRef  = db.ref("games/" + code);
     roomCode = code;
 
-    const snap = await gameRef.once("value");
-    const data = snap.val();
+    let data;
+    try {
+        const snap = await gameRef.once("value");
+        data = snap.val();
+    } catch(e) {
+        alert("Firebase error: " + e.message);
+        return;
+    }
 
-    if (!data)                    { alert("Room not found! Check the code."); return; }
-    if (data.status !== "waiting"){ alert("Room is full or game already started!"); return; }
+    if (!data) {
+        alert("Room not found! Check the code.");
+        return;
+    }
+    if (data.status !== "waiting") {
+        alert("Room is full or game already started!");
+        return;
+    }
 
     mySymbol = "O";
-    playerX  = data.playerX;
+    playerX  = data.playerX || "Player X";
     playerO  = name;
 
-    await gameRef.update({ playerO: name, status: "playing" });
-    startOnlineGame();
+    try {
+        await gameRef.update({ playerO: name, status: "playing" });
+        console.log("Joined room:", code);
+    } catch(e) {
+        alert("Firebase error: " + e.message);
+        return;
+    }
+
+    launchOnlineGame();
 }
 
-// ── Start Online Game ──────────────────────────────────────────
-function startOnlineGame() {
+// ── Launch Online Game ─────────────────────────────────────────
+function launchOnlineGame() {
+    if (isListening) return; // prevent double attach
+    isListening = true;
+
     nameScreen.style.display    = "none";
     gameContainer.style.display = "flex";
     modeBadge.textContent       = `🌐 Online — You are ${mySymbol}`;
@@ -135,46 +187,59 @@ function startOnlineGame() {
     onlineStatus.className      = "onlineStatus connected";
     onlineStatus.textContent    = `🟢 Connected — Room: ${roomCode}`;
 
-    resetGame();
+    // reset local state
+    board    = ["","","","","","","","",""];
+    turn     = "X";
+    gameOver = false;
+    imgbox.style.display = "none";
+    renderBoard(board);
 
+    // detach old listener then reattach fresh
+    gameRef.off();
     gameRef.on("value", snap => {
         const data = snap.val();
         if (!data) return;
 
-        board = data.board;
-        turn  = data.turn;
+        console.log("Firebase update:", data.status, "turn:", data.turn);
 
-        boxes.forEach((box, i) => {
-            box.querySelector(".boxtext").innerText = board[i];
-        });
+        // sync board
+        board = Array.isArray(data.board) ? data.board : ["","","","","","","","",""];
+        turn  = data.turn || "X";
+
+        // always re-render from firebase data
+        renderBoard(board);
 
         if (data.status === "won") {
+            gameOver = true;
             const winnerName = data.winner === "X" ? playerX : playerO;
             info.innerText = `🎉 ${winnerName} wins!`;
-            gameOver = true;
-            if (data.winPattern) {
+            imgbox.style.display = "block";
+            if (Array.isArray(data.winPattern)) {
                 data.winPattern.forEach(i => boxes[i].classList.add("winner"));
                 drawWinLine(data.winPattern);
             }
-            imgbox.style.display = "block";
             addWin(winnerName);
             renderLeaderboard();
+
         } else if (data.status === "draw") {
-            info.innerText = "It's a Draw!";
             gameOver = true;
+            info.innerText = "It's a Draw!";
+
         } else {
             gameOver = false;
             if (turn === mySymbol) {
                 info.innerText = `Your turn (${mySymbol})`;
             } else {
-                const nextName = turn === "X" ? playerX : playerO;
-                info.innerHTML = `<span class="thinking">⏳ ${nextName} is thinking...</span>`;
+                const opponentName = mySymbol === "X" ? playerO : playerX;
+                info.innerHTML = `<span class="thinking">⏳ ${opponentName} is thinking...</span>`;
             }
         }
     });
+
+    renderLeaderboard();
 }
 
-// ── Winning Line ───────────────────────────────────────────────
+// ── Winning Line SVG ───────────────────────────────────────────
 function getLineCoords(pattern) {
     const centers = [
         [16.7,16.7],[50,16.7],[83.3,16.7],
@@ -191,11 +256,11 @@ function drawWinLine(pattern) {
     const old = document.getElementById("winLine");
     if (old) old.remove();
     const { x1, y1, x2, y2 } = getLineCoords(pattern);
-    const svg  = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("id", "winLine");
-    svg.setAttribute("viewBox", "0 0 100 100");
-    svg.setAttribute("preserveAspectRatio", "none");
-    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    const svg  = document.createElementNS("http://www.w3.org/2000/svg","svg");
+    svg.setAttribute("id","winLine");
+    svg.setAttribute("viewBox","0 0 100 100");
+    svg.setAttribute("preserveAspectRatio","none");
+    const line = document.createElementNS("http://www.w3.org/2000/svg","line");
     line.setAttribute("x1", x1); line.setAttribute("y1", y1);
     line.setAttribute("x2", x2); line.setAttribute("y2", y2);
     svg.appendChild(line);
@@ -289,56 +354,85 @@ function getBestMove() {
     return bestIndex;
 }
 
-// ── Handle Outcome ─────────────────────────────────────────────
+// ── Handle Outcome (local games only) ─────────────────────────
 function handleOutcome(result) {
     gameOver = true;
     if (result.winner === "draw") {
         info.innerText = "It's a Draw!";
-        if (mode === "online") gameRef.update({ status: "draw" });
     } else {
         const winnerName = result.winner === "X" ? playerX : playerO;
         info.innerText = `🎉 ${winnerName} wins!`;
         imgbox.style.display = "block";
         result.pattern.forEach(i => boxes[i].classList.add("winner"));
         drawWinLine(result.pattern);
-        if (mode === "online") {
-            gameRef.update({
-                status:     "won",
-                winner:     result.winner,
-                winPattern: result.pattern
-            });
-        } else {
-            addWin(winnerName);
-            renderLeaderboard();
-        }
+        addWin(winnerName);
+        renderLeaderboard();
     }
 }
 
 // ── Handle Click ───────────────────────────────────────────────
 function handleClick(e) {
     if (gameOver) return;
-    if (mode === "computer" && turn === "O") return;
-    if (mode === "online" && turn !== mySymbol) return;
 
     const box = e.currentTarget;
     const idx = parseInt(box.dataset.index);
-    if (board[idx]) return;
+    if (board[idx] !== "") return; // cell already taken
 
+    // ── ONLINE MODE ──
+    if (mode === "online") {
+        if (turn !== mySymbol) {
+            console.log("Not your turn. You are", mySymbol, "current turn:", turn);
+            return;
+        }
+
+        // optimistic local update
+        board[idx] = mySymbol;
+        box.querySelector(".boxtext").innerText = mySymbol;
+
+        const result = checkWinner(board);
+        const nextTurn = mySymbol === "X" ? "O" : "X";
+
+        if (result && result.winner !== "draw") {
+            // write win to firebase
+            gameRef.update({
+                board:      board,
+                turn:       nextTurn,
+                status:     "won",
+                winner:     result.winner,
+                winPattern: result.pattern
+            });
+        } else if (result && result.winner === "draw") {
+            gameRef.update({
+                board:  board,
+                turn:   nextTurn,
+                status: "draw"
+            });
+        } else {
+            // normal move — write board + new turn
+            gameRef.update({
+                board: board,
+                turn:  nextTurn
+            });
+        }
+        return;
+    }
+
+    // ── COMPUTER MODE ──
+    if (mode === "computer" && turn === "O") return;
+
+    // ── LOCAL / COMPUTER MOVE ──
     board[idx] = turn;
     box.querySelector(".boxtext").innerText = turn;
 
     const result = checkWinner();
     if (result) {
         handleOutcome(result);
-        if (mode === "online") gameRef.update({ board });
         return;
     }
 
     turn = turn === "X" ? "O" : "X";
 
-    if (mode === "online") {
-        gameRef.update({ board, turn });
-    } else if (mode === "computer" && turn === "O" && !gameOver) {
+    if (mode === "computer" && turn === "O" && !gameOver) {
         info.innerHTML = `<span class="thinking">🤖 Computer is thinking...</span>`;
         setTimeout(() => {
             const aiIdx = getBestMove();
@@ -364,18 +458,18 @@ function resetGame() {
     turn     = "X";
     gameOver = false;
     imgbox.style.display = "none";
-    info.innerText = `Turn for ${playerX} (X)`;
-    boxes.forEach(box => {
-        box.querySelector(".boxtext").innerText = "";
-        box.classList.remove("winner");
-    });
-    const old = document.getElementById("winLine");
-    if (old) old.remove();
+    info.innerText = mode === "online"
+        ? (mySymbol === "X" ? "Your turn (X)" : `⏳ Waiting for X...`)
+        : `Turn for ${playerX} (X)`;
+    renderBoard(board);
+
     if (mode === "online" && gameRef) {
         gameRef.update({
-            board:  ["","","","","","","","",""],
-            turn:   "X",
-            status: "playing"
+            board:      ["","","","","","","","",""],
+            turn:       "X",
+            status:     "playing",
+            winner:     null,
+            winPattern: null
         });
     }
 }
@@ -389,7 +483,8 @@ boxes.forEach((box, i) => {
 resetBtn.addEventListener("click", resetGame);
 
 changePlayers.addEventListener("click", () => {
-    if (gameRef) gameRef.off();
+    if (gameRef) { gameRef.off(); gameRef = null; }
+    isListening = false;
     gameContainer.style.display = "none";
     nameScreen.style.display    = "flex";
     onlineStatus.style.display  = "none";
@@ -404,7 +499,12 @@ startBtn.addEventListener("click", () => {
     modeBadge.textContent       = mode === "computer" ? "🤖 vs Computer" : "👥 vs Human";
     nameScreen.style.display    = "none";
     gameContainer.style.display = "flex";
-    resetGame();
+    board    = ["","","","","","","","",""];
+    turn     = "X";
+    gameOver = false;
+    imgbox.style.display = "none";
+    info.innerText = `Turn for ${playerX} (X)`;
+    renderBoard(board);
     renderLeaderboard();
 });
 
