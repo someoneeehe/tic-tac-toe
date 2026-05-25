@@ -6,7 +6,6 @@
     box-sizing: border-box;
 }
 
-/* ── CSS variables ── */
 :root {
     --bg: #ffffff;
     --bg-secondary: #f5f5f5;
@@ -58,14 +57,11 @@ nav {
     font-family: "Exo 2", sans-serif;
     transition: background 0.3s;
 }
-
-nav ul {
-    list-style-type: none;
-}
+nav ul { list-style-type: none; }
 
 #darkToggle {
     background: transparent;
-    border: 2px solid rgba(255, 255, 255, 0.5);
+    border: 2px solid rgba(255,255,255,0.5);
     color: white;
     font-size: 20px;
     width: 40px;
@@ -77,10 +73,7 @@ nav ul {
     justify-content: center;
     transition: background 0.2s;
 }
-
-#darkToggle:hover {
-    background: rgba(255, 255, 255, 0.15);
-}
+#darkToggle:hover { background: rgba(255,255,255,0.15); }
 
 /* ── Name Screen ── */
 .nameScreen {
@@ -118,10 +111,7 @@ nav ul {
     color: var(--text);
     transition: border 0.2s, background 0.3s, color 0.3s;
 }
-
-.nameCard input:focus {
-    border-color: blueviolet;
-}
+.nameCard input:focus { border-color: blueviolet; }
 
 #startBtn {
     background: blueviolet;
@@ -134,9 +124,118 @@ nav ul {
     font-family: "Rubik", sans-serif;
     margin-top: 4px;
 }
+#startBtn:hover { background: darkviolet; }
 
-#startBtn:hover {
-    background: darkviolet;
+/* ── Mode Selector ── */
+.modeSelect {
+    display: flex;
+    gap: 8px;
+}
+
+.modeBtn {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid var(--lb-border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text-muted);
+    font-family: "Rubik", sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.modeBtn.active {
+    border-color: blueviolet;
+    background: #f0ebff;
+    color: blueviolet;
+    font-weight: 500;
+}
+
+body.dark .modeBtn.active {
+    background: #2a1a50;
+    color: #c4a8ff;
+    border-color: #8855dd;
+}
+
+.modeBtn:hover:not(.active) {
+    border-color: #aaa;
+    color: var(--text);
+}
+
+/* ── Online Options ── */
+#onlineOptions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#createRoomBtn,
+#joinRoomBtn {
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    font-family: "Rubik", sans-serif;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+#createRoomBtn {
+    background: blueviolet;
+    color: white;
+}
+#createRoomBtn:hover { background: darkviolet; }
+
+#joinRoomBtn {
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-color);
+}
+#joinRoomBtn:hover { filter: brightness(0.92); }
+
+.orDivider {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.roomCode {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 8px;
+    color: blueviolet;
+    text-align: center;
+    padding: 10px;
+    background: var(--bg);
+    border-radius: 8px;
+    border: 2px dashed var(--lb-border);
+    cursor: pointer;
+    user-select: all;
+}
+
+.waitingText {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    animation: blink 1.2s ease-in-out infinite;
+}
+
+.onlineStatus {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.onlineStatus.connected {
+    background: #e6f9ee;
+    color: #1a7a3c;
+}
+
+body.dark .onlineStatus.connected {
+    background: #0d3320;
+    color: #4caf7d;
 }
 
 /* ── Game Layout ── */
@@ -171,20 +270,13 @@ nav ul {
     transition: background 0.15s;
     position: relative;
 }
+.box:hover { background-color: var(--box-hover); }
 
-.box:hover {
-    background-color: var(--box-hover);
-}
-
-/* ── Winning cell highlight ── */
 .box.winner {
     background-color: rgba(34, 197, 94, 0.18);
     animation: winPulse 0.5s ease;
 }
-
-.box.winner .boxtext {
-    color: var(--win-line);
-}
+.box.winner .boxtext { color: var(--win-line); }
 
 @keyframes winPulse {
     0%   { transform: scale(1); }
@@ -192,16 +284,12 @@ nav ul {
     100% { transform: scale(1); }
 }
 
-/* ── Winning SVG line overlay ── */
 #winLine {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
     pointer-events: none;
 }
-
 #winLine line {
     stroke: var(--win-line);
     stroke-width: 5;
@@ -210,12 +298,8 @@ nav ul {
     stroke-dashoffset: 400;
     animation: drawLine 0.5s ease forwards;
 }
+@keyframes drawLine { to { stroke-dashoffset: 0; } }
 
-@keyframes drawLine {
-    to { stroke-dashoffset: 0; }
-}
-
-/* ── Border helpers ── */
 .br-0 { border-right: 0; }
 .bl-0 { border-left: 0; }
 .bt-0 { border-top: 0; }
@@ -230,19 +314,25 @@ nav ul {
     gap: 12px;
     max-width: 280px;
 }
+.gameInfo h1 { font-size: 1.4rem; color: var(--text); }
+.info { font-size: 1.1rem; color: var(--text-muted); }
 
-.gameInfo h1 {
-    font-size: 1.4rem;
-    color: var(--text);
+.modeBadge {
+    display: inline-block;
+    background: #f0ebff;
+    color: blueviolet;
+    border: 1.5px solid var(--lb-border);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+body.dark .modeBadge {
+    background: #2a1a50;
+    color: #c4a8ff;
 }
 
-.info {
-    font-size: 1.1rem;
-    color: var(--text-muted);
-}
-
-#reset,
-#changePlayers {
+#reset, #changePlayers {
     padding: 8px 18px;
     font-size: 0.95rem;
     cursor: pointer;
@@ -250,32 +340,13 @@ nav ul {
     border-radius: 6px;
     font-family: "Rubik", sans-serif;
 }
+#reset { background: blueviolet; color: white; }
+#reset:hover { background: darkviolet; }
+#changePlayers { background: var(--btn-secondary-bg); color: var(--btn-secondary-color); }
+#changePlayers:hover { filter: brightness(0.92); }
 
-#reset {
-    background: blueviolet;
-    color: white;
-}
-
-#reset:hover {
-    background: darkviolet;
-}
-
-#changePlayers {
-    background: var(--btn-secondary-bg);
-    color: var(--btn-secondary-color);
-}
-
-#changePlayers:hover {
-    filter: brightness(0.92);
-}
-
-.imgbox {
-    display: none;
-}
-
-.imgbox img {
-    width: 80px;
-}
+.imgbox { display: none; }
+.imgbox img { width: 80px; }
 
 /* ── Leaderboard ── */
 .leaderboard {
@@ -286,14 +357,7 @@ nav ul {
     margin-top: 4px;
     transition: background 0.3s, border-color 0.3s;
 }
-
-.lb-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: blueviolet;
-    margin-bottom: 12px;
-}
-
+.lb-title { font-size: 1rem; font-weight: 600; color: blueviolet; margin-bottom: 12px; }
 .lb-row {
     display: flex;
     align-items: center;
@@ -301,74 +365,23 @@ nav ul {
     padding: 7px 0;
     border-bottom: 1px solid var(--lb-border);
 }
-
-.lb-row:last-of-type {
-    border-bottom: none;
-}
-
-.lb-rank {
-    font-size: 13px;
-    font-weight: 700;
-    width: 20px;
-    text-align: center;
-    color: var(--text-muted);
-}
-
+.lb-row:last-of-type { border-bottom: none; }
+.lb-rank { font-size: 13px; font-weight: 700; width: 20px; text-align: center; color: var(--text-muted); }
 .lb-rank.gold   { color: #b8860b; }
 .lb-rank.silver { color: #888888; }
 .lb-rank.bronze { color: #a0522d; }
-
 .lb-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: #e4daff;
-    color: #4a2c9a;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 700;
-    flex-shrink: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #e4daff; color: #4a2c9a;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
 }
-
-body.dark .lb-avatar {
-    background: #3d2080;
-    color: #cbb8ff;
-}
-
-.lb-name {
-    flex: 1;
-    font-size: 14px;
-    color: var(--text);
-}
-
-.lb-wins {
-    font-size: 13px;
-    font-weight: 600;
-    color: blueviolet;
-}
-
-.lb-bar-wrap {
-    height: 3px;
-    background: var(--lb-border);
-    border-radius: 2px;
-    margin-top: 2px;
-}
-
-.lb-bar {
-    height: 3px;
-    background: blueviolet;
-    border-radius: 2px;
-    transition: width 0.4s;
-}
-
-.lb-empty {
-    font-size: 13px;
-    color: var(--text-muted);
-    text-align: center;
-    padding: 10px 0;
-}
+body.dark .lb-avatar { background: #3d2080; color: #cbb8ff; }
+.lb-name { flex: 1; font-size: 14px; color: var(--text); }
+.lb-wins { font-size: 13px; font-weight: 600; color: blueviolet; }
+.lb-bar-wrap { height: 3px; background: var(--lb-border); border-radius: 2px; margin-top: 2px; }
+.lb-bar { height: 3px; background: blueviolet; border-radius: 2px; transition: width 0.4s; }
+.lb-empty { font-size: 13px; color: var(--text-muted); text-align: center; padding: 10px 0; }
 
 #clearLb {
     margin-top: 10px;
@@ -381,80 +394,19 @@ body.dark .lb-avatar {
     cursor: pointer;
     font-family: "Rubik", sans-serif;
 }
+#clearLb:hover { background: var(--lb-bg); color: blueviolet; border-color: blueviolet; }
 
-#clearLb:hover {
-    background: var(--lb-bg);
-    color: blueviolet;
-    border-color: blueviolet;
-}
-
-.modeSelect {
-    display: flex;
-    gap: 10px;
-    margin-top: 8px;
-}
-
-.modeBN {
-    flex: 1;
-    padding: 8px 0;
-    font-size: 0.9rem;
-    cursor: pointer;
-    border: 1.5px solid var(--input-border);
-    border-radius: 6px;
-    background: var(--btn-secondary-bg);
-    color: var(--btn-secondary-color);
-    font-family: "Rubik", sans-serif;
-    transition: background 0.2s, border-color 0.2s, color 0.2s;
-}
-
-.modeBN.active {
-    background: blueviolet;
-    color: white;
-    border-color: blueviolet;
-    font-weight: 600;
-}
-
-body.dark .modeBN {
-    border-color: var(--input-border);
-    background: var(--btn-secondary-bg);
-    color: var(--btn-secondary-color);
-}
-
-.modeBtn:hover:not(.active) {
-    background: var(--btn-secondary-bg);
-    color: var(--btn-secondary-color);
-    border-color: var(--input-border);
-}
-
-.modeBatch {
-    position: absolute;
-    top: -10px;
-    right: -10px;
-    background: blueviolet;
-    color: white;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 12px;
-    font-family: "Rubik", sans-serif;
-}
-
-.body.dark .modeBatch {
-    background: #3d0080;
-}
-
-#player0.hidden {
-    display: none;
+/* ── Animations ── */
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
 }
 
 .thinking {
-    font-size: 14px;
     color: var(--text-muted);
-    margin-top: 6px;
+    font-size: 0.9rem;
     font-style: italic;
+    animation: blink 0.8s ease-in-out infinite;
 }
 
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-}
-
+#playerO.hidden { display: none; }

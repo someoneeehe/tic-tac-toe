@@ -17,14 +17,32 @@
     <!-- Name Entry Screen -->
     <div class="nameScreen" id="nameScreen">
         <div class="nameCard">
-            <h2>Enter Player Names</h2>
-            <input type="text" id="playerX" placeholder="Player X name" maxlength="16">
+            <h2>MyTicTacToe</h2>
+            <input type="text" id="playerX" placeholder="Your name" maxlength="16">
 
             <div class="modeSelect">
-                <button class="modeBN active" id="btnHuman" onclick="setMode('human')">Human vs Human</button>
-                <button class="modeBN" id="btnCPU" onclick="setMode('computer')">Human vs Computer</button>
+                <button class="modeBtn active" id="btnHuman" onclick="setMode('human')">👥 vs Human</button>
+                <button class="modeBtn" id="btnCPU" onclick="setMode('computer')">🤖 vs Computer</button>
+                <button class="modeBtn" id="btnOnline" onclick="setMode('online')">🌐 Online</button>
             </div>
+
+            <!-- shown only in vs human mode -->
             <input type="text" id="playerO" placeholder="Player O name" maxlength="16">
+
+            <!-- shown only in online mode -->
+            <div id="onlineOptions" style="display:none;">
+                <button id="createRoomBtn" onclick="createRoom()">🆕 Create Room</button>
+                <div class="orDivider">— or —</div>
+                <input type="text" id="roomCodeInput" placeholder="Enter room code" maxlength="6">
+                <button id="joinRoomBtn" onclick="joinRoom()">🚪 Join Room</button>
+            </div>
+
+            <div id="roomDisplay" style="display:none;">
+                <p>Room Code:</p>
+                <div class="roomCode" id="roomCodeDisplay"></div>
+                <p class="waitingText">⏳ Waiting for opponent...</p>
+            </div>
+
             <button id="startBtn">Start Game</button>
         </div>
     </div>
@@ -47,12 +65,13 @@
 
         <div class="gameInfo">
             <h1>Welcome to MyTicTacToe</h1>
-            <div class="modeBadge" id="modeBadge">Human vs Human</div>
+            <div class="modeBadge" id="modeBadge">👥 vs Human</div>
             <span class="info" id="info">Turn for X</span>
+            <div id="onlineStatus" class="onlineStatus" style="display:none;"></div>
             <button id="reset">Reset</button>
             <button id="changePlayers">Change Players</button>
             <div class="imgbox" id="imgbox">
-                <img src="excited.gif" alt="winner celebration">
+                <img src="excited.gif" alt="winner">
             </div>
 
             <!-- Leaderboard -->
@@ -64,6 +83,21 @@
         </div>
     </div>
 
+    <!-- Firebase MUST come before script.js -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBt5q_rtvvStXQ3JT1nIdrwG0a3hr9PV30",
+            authDomain: "tic-tac-toe-5d681.firebaseapp.com",
+            databaseURL: "https://tic-tac-toe-5d681-default-rtdb.firebaseio.com",
+            projectId: "tic-tac-toe-5d681",
+            storageBucket: "tic-tac-toe-5d681.firebasestorage.app",
+            messagingSenderId: "821408788441",
+            appId: "1:821408788441:web:982ebc6f53c4e57c1eb3c8"
+        };
+        firebase.initializeApp(firebaseConfig);
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
