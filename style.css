@@ -410,3 +410,53 @@ body.dark .lb-avatar { background: #3d2080; color: #cbb8ff; }
 }
 
 #playerO.hidden { display: none; }
+
+/* Turn Timer*/
+.turnTimer {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.timer-sing{
+    position: absolute;
+    top: 0; left: 0;
+    width: 52px;
+    height: 52px;
+    transform: rotate(-90deg);
+}
+
+.timer-ring-bg {
+    fill:none;
+    stroke: var(--lb-border);
+    stroke-width: 3;
+}
+
+.timer-ring {
+    fill:none;
+    stroke: blueviolet;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 100; 
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1s linear, stroke 0.3s;
+}
+
+.timer-ring-fill.urgent {
+    stroke: #ef4444;
+}
+
+.timer-num{
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    z-index: 1;
+    font-family: "Rubik", sans-serif;
+}
+
+.timer-num.urgent {
+    color: #ef4444;
+}

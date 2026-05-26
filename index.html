@@ -1,13 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta http-equiv="Content-Security-Policy"
-          content="default-src * 'unsafe-inline' 'unsafe-eval';
-           script-src * 'unsafe-inline' 'unsafe-eval';
-           connect-src * 'unsafe-inline';
-           img-src * data: blob: 'unsafe-inline';
-           frame-src *;
-           style-src * 'unsafe-inline';">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tic Tac Toe</title>
@@ -74,6 +67,13 @@
             <h1>Welcome to MyTicTacToe</h1>
             <div class="modeBadge" id="modeBadge">👥 vs Human</div>
             <span class="info" id="info">Turn for X</span>
+            <div class="timer-wrap" id="timerWrap" style="display:none;">
+                <svg class="timer-ring" viewBox="0 0 40 40">
+                    <circle class="timer-ring-bg" cx="20" cy="20" r="16"/>
+                    <circle class="timer-ring-fill" id="timerCircle" cx="20" cy="20" r="16"/>
+                </svg>
+                <span class="timer-num" id="timerNum"></span>
+            </div>
             <div id="onlineStatus" class="onlineStatus" style="display:none;"></div>
             <button id="reset">Reset</button>
             <button id="changePlayers">Change Players</button>

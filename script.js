@@ -31,6 +31,9 @@ let mode        = "human";
 let mySymbol    = "";
 let roomCode    = "";
 let gameRef     = null;
+let timerInterval = null;
+let timeLeft      = 10;
+const TIMER_MAX = 10;
 let isListening = false;
 
 const winPatterns = [
@@ -356,6 +359,7 @@ function getBestMove() {
 
 // ── Handle Outcome (local games only) ─────────────────────────
 function handleOutcome(result) {
+    stopTimer();
     gameOver = true;
     if (result.winner === "draw") {
         info.innerText = "It's a Draw!";
@@ -368,6 +372,87 @@ function handleOutcome(result) {
         addWin(winnerName);
         renderLeaderboard();
     }
+}
+//--Turn Timer
+function startTurnTimer() {
+    // no timer in online mode since we don't want to force disconnects
+    if (mode === "online") return;
+
+    stopTimer();
+    timeLeft = TIMER_MAX;
+    updateTimerUI(timeLeft);
+
+    const wrap = document.getElementById("timerWrap");
+    const numE1 = document.getElementById("timerNum");
+    const circle = document.getElementById("timerCircle");
+    wrap.style.display = "flex";
+
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerUI(timeLeft);
+
+        if (timeLeft <= 0) {
+            stopTimer();
+            autoSkipTurn();
+        }
+    }, 1000);
+}
+
+function stopTimer() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    const wrap = document.getElementById("timerWrap");
+    if (wrap) wrap.style.display = "none";
+}
+
+function updateTimerUI(t) {
+    const numE1 = document.getElementById("timerNum");
+    const circle = document.getElementById("timerCircle");
+    if (!numE1 || !circle) return;
+
+    numE1.textContent = t;
+
+    const offset = Math.round(((TIMER_MAX - t) / TIMER_MAX) * 100);
+    circle.style.strokeDashoffset = offset;
+
+    if (t <= 3) {
+        numE1.classList.add("urgent");
+        circle.classList.add("urgent");
+    } else {
+        numE1.classList.remove("urgent");
+        circle.classList.remove("urgent");
+    }
+}
+
+function autoSkipTurn() {
+    if (gameOver) return;
+    const curreentName = turn === "X" ? playerX : playerO;
+    info.innerText = `⏰ ${curreentName} ran out of time!`;
+
+    setTimeout(() => {
+        turn = turn === "X" ? "O" : "X";
+        const nextName = turn === "X" ? playerX : playerO;
+
+        if (mode === "computer" && turn === "O") {
+            info.innerHTML = `<span class="thinking">🤖 Computer is thinking...</span>`;
+            setTimeout(() => {
+                const aiIdx = getBestMove();
+                board[aiIdx] = "O";
+                boxes[aiIdx].querySelector(".boxtext").innerText = "O";
+                const aiResult = checkWinner();
+                if (aiResult) {
+                    handleOutcome(aiResult);
+                } else {
+                    turn = "X";
+                    info.innerText = `Turn for ${playerX} (X)`;
+                    startTimer();
+                }
+            }, 450);
+        } else {
+            info.innerText = `Turn for ${nextName} (${turn})`;
+            startTimer();
+        }
+    }, 1000);
 }
 
 // ── Handle Click ───────────────────────────────────────────────
@@ -432,7 +517,10 @@ function handleClick(e) {
 
     turn = turn === "X" ? "O" : "X";
 
-    if (mode === "computer" && turn === "O" && !gameOver) {
+    if (mode === "online") {
+        gameRef.update({ board, turn });
+    } else if (mode === "computer" && turn === "O" && !gameOver) {
+        stopTimer();
         info.innerHTML = `<span class="thinking">🤖 Computer is thinking...</span>`;
         setTimeout(() => {
             const aiIdx = getBestMove();
@@ -444,11 +532,13 @@ function handleClick(e) {
             } else {
                 turn = "X";
                 info.innerText = `Turn for ${playerX} (X)`;
+                startTimer();
             }
         }, 450);
     } else {
         const nextName = turn === "X" ? playerX : playerO;
         info.innerText = `Turn for ${nextName} (${turn})`;
+        startTimer();
     }
 }
 
@@ -462,6 +552,8 @@ function resetGame() {
         ? (mySymbol === "X" ? "Your turn (X)" : `⏳ Waiting for X...`)
         : `Turn for ${playerX} (X)`;
     renderBoard(board);
+    stopTimer();
+    if (mode !== "online") startTimer();
 
     if (mode === "online" && gameRef) {
         gameRef.update({
@@ -483,6 +575,7 @@ boxes.forEach((box, i) => {
 resetBtn.addEventListener("click", resetGame);
 
 changePlayers.addEventListener("click", () => {
+    stopTimer();
     if (gameRef) { gameRef.off(); gameRef = null; }
     isListening = false;
     gameContainer.style.display = "none";
@@ -506,6 +599,7 @@ startBtn.addEventListener("click", () => {
     info.innerText = `Turn for ${playerX} (X)`;
     renderBoard(board);
     renderLeaderboard();
+    startTimer();
 });
 
 clearLb.addEventListener("click", () => {
