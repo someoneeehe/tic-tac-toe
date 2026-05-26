@@ -411,8 +411,8 @@ body.dark .lb-avatar { background: #3d2080; color: #cbb8ff; }
 
 #playerO.hidden { display: none; }
 
-/* Turn Timer*/
-.turnTimer {
+/* ── Turn Timer ── */
+.timer-wrap {
     position: relative;
     width: 52px;
     height: 52px;
@@ -421,7 +421,7 @@ body.dark .lb-avatar { background: #3d2080; color: #cbb8ff; }
     justify-content: center;
 }
 
-.timer-sing{
+.timer-ring {
     position: absolute;
     top: 0; left: 0;
     width: 52px;
@@ -430,17 +430,17 @@ body.dark .lb-avatar { background: #3d2080; color: #cbb8ff; }
 }
 
 .timer-ring-bg {
-    fill:none;
+    fill: none;
     stroke: var(--lb-border);
     stroke-width: 3;
 }
 
-.timer-ring {
-    fill:none;
+.timer-ring-fill {
+    fill: none;
     stroke: blueviolet;
     stroke-width: 3;
     stroke-linecap: round;
-    stroke-dasharray: 100; 
+    stroke-dasharray: 100;
     stroke-dashoffset: 0;
     transition: stroke-dashoffset 1s linear, stroke 0.3s;
 }
@@ -449,7 +449,7 @@ body.dark .lb-avatar { background: #3d2080; color: #cbb8ff; }
     stroke: #ef4444;
 }
 
-.timer-num{
+.timer-num {
     font-size: 14px;
     font-weight: 700;
     color: var(--text);

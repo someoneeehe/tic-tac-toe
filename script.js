@@ -374,7 +374,7 @@ function handleOutcome(result) {
     }
 }
 //--Turn Timer
-function startTurnTimer() {
+function startTimer() {
     // no timer in online mode since we don't want to force disconnects
     if (mode === "online") return;
 
@@ -426,8 +426,8 @@ function updateTimerUI(t) {
 
 function autoSkipTurn() {
     if (gameOver) return;
-    const curreentName = turn === "X" ? playerX : playerO;
-    info.innerText = `⏰ ${curreentName} ran out of time!`;
+    const currentName = turn === "X" ? playerX : playerO;
+    info.innerText = `⏰ ${currentName} ran out of time!`;
 
     setTimeout(() => {
         turn = turn === "X" ? "O" : "X";
