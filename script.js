@@ -213,6 +213,7 @@ function launchOnlineGame() {
         renderBoard(board);
 
         if (data.status === "won") {
+            stopTimer();
             gameOver = true;
             const winnerName = data.winner === "X" ? playerX : playerO;
             info.innerText = `🎉 ${winnerName} wins!`;
@@ -225,6 +226,7 @@ function launchOnlineGame() {
             renderLeaderboard();
 
         } else if (data.status === "draw") {
+            stopTimer();
             gameOver = true;
             info.innerText = "It's a Draw!";
 
@@ -236,6 +238,7 @@ function launchOnlineGame() {
                 const opponentName = mySymbol === "X" ? playerO : playerX;
                 info.innerHTML = `<span class="thinking">⏳ ${opponentName} is thinking...</span>`;
             }
+            startTimer();
         }
     });
 
@@ -375,9 +378,6 @@ function handleOutcome(result) {
 }
 //--Turn Timer
 function startTimer() {
-    // no timer in online mode since we don't want to force disconnects
-    if (mode === "online") return;
-
     stopTimer();
     timeLeft = TIMER_MAX;
     updateTimerUI(timeLeft);
@@ -430,6 +430,14 @@ function autoSkipTurn() {
     info.innerText = `⏰ ${currentName} ran out of time!`;
 
     setTimeout(() => {
+        if (mode === "online") {
+            if (turn === mySymbol) {
+                const nextTurn = mySymbol === "X" ? "O" : "X";
+                gameRef.update({ turn: nextTurn });
+            }
+            return;
+        }
+
         turn = turn === "X" ? "O" : "X";
         const nextName = turn === "X" ? playerX : playerO;
 
