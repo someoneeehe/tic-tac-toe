@@ -4,32 +4,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tic Tac Toe</title>
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src * 'unsafe-inline' 'unsafe-eval';
+                 script-src * 'unsafe-inline' 'unsafe-eval';
+                 connect-src * 'unsafe-inline';
+                 img-src * data: blob: 'unsafe-inline';
+                 frame-src *;
+                 style-src * 'unsafe-inline';">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+    <!-- In-app toast notification -->
+    <div id="appToast"></div>
+
     <nav>
-        <ul>
-            <li>MyTicTacToe.com</li>
-        </ul>
+        <ul><li>MyTicTacToe.com</li></ul>
         <button id="darkToggle" title="Toggle dark mode">🌙</button>
     </nav>
 
-    <!-- Name Entry Screen -->
+    <!-- ── Name / Mode Entry Screen ── -->
     <div class="nameScreen" id="nameScreen">
         <div class="nameCard">
             <h2>MyTicTacToe</h2>
+
             <input type="text" id="playerX" placeholder="Your name" maxlength="16">
 
             <div class="modeSelect">
-                <button class="modeBtn active" id="btnHuman" onclick="setMode('human')">👥 vs Human</button>
-                <button class="modeBtn" id="btnCPU" onclick="setMode('computer')">🤖 vs Computer</button>
-                <button class="modeBtn" id="btnOnline" onclick="setMode('online')">🌐 Online</button>
+                <button class="modeBtn active" id="btnHuman"   onclick="setMode('human')">👥 vs Human</button>
+                <button class="modeBtn"        id="btnCPU"     onclick="setMode('computer')">🤖 vs CPU</button>
+                <button class="modeBtn"        id="btnOnline"  onclick="setMode('online')">🌐 Online</button>
             </div>
 
-            <!-- shown only in vs human mode -->
+            <!-- vs Human only -->
             <input type="text" id="playerO" placeholder="Player O name" maxlength="16">
 
-            <!-- shown only in online mode -->
+            <!-- Online only -->
             <div id="onlineOptions" style="display:none;">
                 <button id="createRoomBtn" onclick="createRoom()">🆕 Create Room</button>
                 <div class="orDivider">— or —</div>
@@ -37,9 +47,10 @@
                 <button id="joinRoomBtn" onclick="joinRoom()">🚪 Join Room</button>
             </div>
 
+            <!-- Room code display (after create) -->
             <div id="roomDisplay" style="display:none;">
-                <p>Room Code:</p>
-                <div class="roomCode" id="roomCodeDisplay"></div>
+                <p style="font-size:13px;color:var(--text-muted)">Share this code with your friend:</p>
+                <div class="roomCode" id="roomCodeDisplay" title="Click to copy"></div>
                 <p class="waitingText">⏳ Waiting for opponent...</p>
             </div>
 
@@ -47,8 +58,10 @@
         </div>
     </div>
 
-    <!-- Game Screen -->
+    <!-- ── Game Screen ── -->
     <div class="gameContainer" id="gameContainer" style="display:none;">
+
+        <!-- Board -->
         <div class="board-wrap">
             <div class="container">
                 <div class="box bt-0 bl-0"><span class="boxtext"></span></div>
@@ -63,22 +76,30 @@
             </div>
         </div>
 
+        <!-- Info panel -->
         <div class="gameInfo">
             <h1>Welcome to MyTicTacToe</h1>
+
             <div class="modeBadge" id="modeBadge">👥 vs Human</div>
+
             <span class="info" id="info">Turn for X</span>
+
+            <!-- Turn Timer -->
             <div class="timer-wrap" id="timerWrap" style="display:none;">
                 <svg class="timer-ring" viewBox="0 0 40 40">
-                    <circle class="timer-ring-bg" cx="20" cy="20" r="16"/>
-                    <circle class="timer-ring-fill" id="timerCircle" cx="20" cy="20" r="16"/>
+                    <circle class="timer-ring-bg"   cx="20" cy="20" r="16"/>
+                    <circle class="timer-ring-fill" cx="20" cy="20" r="16" id="timerCircle"/>
                 </svg>
-                <span class="timer-num" id="timerNum"></span>
+                <span class="timer-num" id="timerNum">10</span>
             </div>
+
             <div id="onlineStatus" class="onlineStatus" style="display:none;"></div>
+
             <button id="reset">Reset</button>
             <button id="changePlayers">Change Players</button>
+
             <div class="imgbox" id="imgbox">
-                <img src="excited.gif" alt="winner">
+                <img src="excited.gif" alt="winner celebration">
             </div>
 
             <!-- Leaderboard -->
@@ -90,7 +111,7 @@
         </div>
     </div>
 
-    <!-- Firebase MUST come before script.js -->
+    <!-- Firebase (must come before script.js) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script>
