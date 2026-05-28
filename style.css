@@ -180,16 +180,9 @@ body.dark .modeBtn.active {
     cursor: pointer;
 }
 
-#createRoomBtn {
-    background: blueviolet;
-    color: white;
-}
+#createRoomBtn { background: blueviolet; color: white; }
 #createRoomBtn:hover { background: darkviolet; }
-
-#joinRoomBtn {
-    background: var(--btn-secondary-bg);
-    color: var(--btn-secondary-color);
-}
+#joinRoomBtn { background: var(--btn-secondary-bg); color: var(--btn-secondary-color); }
 #joinRoomBtn:hover { filter: brightness(0.92); }
 
 .orDivider {
@@ -284,6 +277,7 @@ body.dark .onlineStatus.connected {
     100% { transform: scale(1); }
 }
 
+/* ── Win Line SVG ── */
 #winLine {
     position: absolute;
     top: 0; left: 0;
@@ -377,6 +371,7 @@ body.dark .modeBadge {
     font-size: 12px; font-weight: 700; flex-shrink: 0;
 }
 body.dark .lb-avatar { background: #3d2080; color: #cbb8ff; }
+.lb-name-wrap { flex: 1; }
 .lb-name { flex: 1; font-size: 14px; color: var(--text); }
 .lb-wins { font-size: 13px; font-weight: 600; color: blueviolet; }
 .lb-bar-wrap { height: 3px; background: var(--lb-border); border-radius: 2px; margin-top: 2px; }
@@ -440,14 +435,13 @@ body.dark .lb-avatar { background: #3d2080; color: #cbb8ff; }
     stroke: blueviolet;
     stroke-width: 3;
     stroke-linecap: round;
-    stroke-dasharray: 100;
+    /* FIX: circumference set by JS dynamically now, but provide fallback */
+    stroke-dasharray: 100.53;
     stroke-dashoffset: 0;
     transition: stroke-dashoffset 1s linear, stroke 0.3s;
 }
 
-.timer-ring-fill.urgent {
-    stroke: #ef4444;
-}
+.timer-ring-fill.urgent { stroke: #ef4444; }
 
 .timer-num {
     font-size: 14px;
@@ -457,6 +451,4 @@ body.dark .lb-avatar { background: #3d2080; color: #cbb8ff; }
     font-family: "Rubik", sans-serif;
 }
 
-.timer-num.urgent {
-    color: #ef4444;
-}
+.timer-num.urgent { color: #ef4444; }
