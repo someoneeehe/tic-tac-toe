@@ -1,6 +1,82 @@
 // ── Firebase Database ──────────────────────────────────────────
 const db = firebase.database();
 
+//--local notifications
+let notificationsAllowed = false;
+
+async function setupLocalNotifications() {
+    if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return;
+
+    const { LocalNotifications } = Capacitor.Plugins;
+
+    const perm = await LocalNotifications.requestPermissions();
+    notificationsAllowed = perm && perm.display === "granted";
+    
+    LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
+        const data = action.notification.data;
+        if (data && data.type === "your_turn") {
+            console.log('user tapped your turn notification');
+        }
+        if (data && data.type === "invite") {
+            nameScreen.style.display = 'flex';
+            gameContainer.style.display = 'none';
+            setMode("online");
+            if (data.roomCode) {
+                document.getElementById("roomCodeInput").value = data.roomCode;
+            }
+        }
+    });
+
+    console.log("Local notifications set up. Allowed:", notificationsAllowed);
+}
+
+async function sendLocalNotification(id, title, body, extra = {}, delaySeconds =1) {
+    if (!notificationsAllowed) return;
+    if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return;
+
+    const { LocalNotifications } = Capacitor.Plugins;
+
+    try {
+        await LocalNotifications.cancel({ notifications: [{ id }] });
+    } catch(e) {}
+
+    await LocalNotifications.schedule({
+        notifications: [{
+            id,
+            title,
+            body,
+            extra,
+            schedule: { at: new Date(Date.now() + delaySeconds * 1000) },
+            sound: 'default',
+            smallIcon: 'ic_stat_icon_config_sample',
+            actionTypeId: '',
+            channelId: 'tictactoe'
+        }]
+    });
+}
+
+
+async function cancelNotiffication(id) {
+    if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return;
+    const { LocalNotifications } = Capacitor.Plugins;
+    try {
+        await LocalNotifications.cancel({ notifications: [{ id }] });
+    } catch(e) {}
+}
+
+const NOTIF = {
+    YOUR_TURN: 1,
+    TIMER_WARN: 2,
+    OPPONENT_WIN: 3,
+    DRAW: 4,
+    INVITE: 5,
+    IDLE_REMIND: 6
+};
+
+setupLocalNotifications();
+
+
+
 // ── DOM refs ───────────────────────────────────────────────────
 const boxes           = document.querySelectorAll(".box");
 const info            = document.getElementById("info");
@@ -217,6 +293,15 @@ function launchOnlineGame() {
             gameOver = true;
             const winnerName = data.winner === "X" ? playerX : playerO;
             info.innerText = `🎉 ${winnerName} wins!`;
+            const didWin = (data.winner === mySymbol);
+            sendLocalNotification(
+                NOTIF.OPPONENT_WIN,
+                didWin ? "You win! 🎉" : "You lose! 😢",
+                didWin
+                    ? 'You beat ${data.winner === "X" ? playerX : playerO}!'
+                    : '${data.winner === "X" ? playerX : playerO}!'
+                { type: 'result' }
+            );
             imgbox.style.display = "block";
             if (Array.isArray(data.winPattern)) {
                 data.winPattern.forEach(i => boxes[i].classList.add("winner"));
@@ -230,13 +315,29 @@ function launchOnlineGame() {
             gameOver = true;
             info.innerText = "It's a Draw!";
 
+            sendLocalNotification(
+                NOTIF.DRAW,
+                "It's a Draw! 🤝",
+                "The game ended in a draw.",
+                { type: 'result' }
+            );
+
         } else {
             gameOver = false;
             if (turn === mySymbol) {
                 info.innerText = `Your turn (${mySymbol})`;
+                cancelNotiffication(NOTIF.YOUR_TURN);
+                sendLocalNotification(
+                    NOTIF.YOUR_TURN,
+                    "Your turn! 🎮",
+                    `It's your move against ${mySymbol === "X" ? playerO : playerX}.`,
+                    { type: 'your_turn', roomCode },
+                    2
+                );
             } else {
                 const opponentName = mySymbol === "X" ? playerO : playerX;
                 info.innerHTML = `<span class="thinking">⏳ ${opponentName} is thinking...</span>`;
+                cancelNotiffication(NOTIF.YOUR_TURN);
             }
             startTimer();
         }
@@ -418,6 +519,15 @@ function updateTimerUI(t) {
     if (t <= 3) {
         numE1.classList.add("urgent");
         circle.classList.add("urgent");
+        if (t === 3 && turn === mySymbol) {
+            sendLocalNotification(
+                NOTIF.TIMER_WARN,
+                "Hurry up! ⏰",
+                "Only 3 seconds left to make your move!",
+                { type: 'timer_warning', roomCode },
+                0
+            );
+        }
     } else {
         numE1.classList.remove("urgent");
         circle.classList.remove("urgent");
@@ -430,13 +540,31 @@ function autoSkipTurn() {
     info.innerText = `⏰ ${currentName} ran out of time!`;
 
     setTimeout(() => {
-        if (mode === "online") {
-            if (turn === mySymbol) {
-                const nextTurn = mySymbol === "X" ? "O" : "X";
-                gameRef.update({ turn: nextTurn });
-            }
-            return;
-        }
+       if (mode === "online") {
+    const nextTurn = mySymbol === "X" ? "O" : "X";
+    const deadline = Date.now() + (TIMER_MAX * 1000);
+    gameRef.update({
+        board,
+        turn:          nextTurn,
+        timerDeadline: deadline,
+        timerTurn:     nextTurn,
+        timerSkipped:  null
+    });
+
+    // ↓ CHANGE 5 GOES HERE ↓
+    // schedule idle reminder in case opponent goes quiet
+    cancelNotification(NOTIF.IDLE_REMIND);
+    sendLocalNotification(
+        NOTIF.IDLE_REMIND,
+        "👀 Still waiting...",
+        "Your opponent hasn't moved yet. Check back!",
+        { type: 'your_turn', roomCode },
+        30  // fires after 30 seconds if app is minimized
+    );
+    // ↑ CHANGE 5 ENDS HERE ↑
+
+    return;
+}
 
         turn = turn === "X" ? "O" : "X";
         const nextName = turn === "X" ? playerX : playerO;
@@ -613,4 +741,11 @@ startBtn.addEventListener("click", () => {
 clearLb.addEventListener("click", () => {
     localStorage.removeItem("tttLeaderboard");
     renderLeaderboard();
+});
+
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === 'visible') {
+        cancelNotiffication(NOTIF.YOUR_TURN);
+        cancelNotiffication(NOTIF.TIMER_WARN);
+    }
 });
