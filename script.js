@@ -15,87 +15,192 @@ const isNative = () => !!(window.Capacitor && window.Capacitor.isNativePlatform(
 // ── Notification IDs ───────────────────────────────────────────
 const NOTIF = { YOUR_TURN:1, TIMER_WARN:2, OPPONENT_WIN:3, DRAW:4, IDLE_REMIND:6 };
 let notificationsAllowed = false;
+let fcmToken = null;    // FCM token for this device (web or native)
 
+// ── VAPID key — get this from Firebase Console:
+//    Project Settings → Cloud Messaging → Web Push certificates → Key pair
+const VAPID_KEY = "YOUR_VAPID_KEY_HERE";
+
+// ══════════════════════════════════════════════════════════════
+//  NOTIFICATION SETUP
+//  Call this inside a user-gesture (button click), not on load.
+//  That's the only way browsers allow Notification.requestPermission().
+// ══════════════════════════════════════════════════════════════
 async function setupNotifications() {
     if (isNative()) {
-        try {
-            const { LocalNotifications } = Capacitor.Plugins;
-            const perm = await LocalNotifications.requestPermissions();
-            notificationsAllowed = perm && perm.display === "granted";
-            if (notificationsAllowed) {
-                try {
-                    await LocalNotifications.createChannel({
-                        id:"tictactoe", name:"TicTacToe",
-                        importance:4, sound:"default",
-                        vibration:true, lights:true, lightColor:"#c8ff00"
-                    });
-                } catch(e) {}
-                LocalNotifications.addListener("localNotificationActionPerformed", action => {
-                    const d = action.notification.extra || {};
+        await setupNative();
+    } else {
+        await setupWebFCM();
+    }
+}
+
+// ── Native (Capacitor) ─────────────────────────────────────────
+async function setupNative() {
+    try {
+        const { LocalNotifications, PushNotifications } = Capacitor.Plugins;
+
+        // LocalNotifications for in-app scheduling
+        const lperm = await LocalNotifications.requestPermissions();
+        notificationsAllowed = lperm && lperm.display === "granted";
+
+        if (notificationsAllowed) {
+            try {
+                await LocalNotifications.createChannel({
+                    id:"tictactoe", name:"TicTacToe",
+                    importance:4, sound:"default",
+                    vibration:true, lights:true, lightColor:"#c8ff00"
+                });
+            } catch(e) {}
+
+            LocalNotifications.addListener("localNotificationActionPerformed", action => {
+                const d = action.notification.extra || {};
+                if (d.roomCode) {
+                    goTo("nameScreen");
+                    document.getElementById("roomCodeInput").value = d.roomCode;
+                }
+            });
+        }
+
+        // FCM via Capacitor PushNotifications plugin for server-sent push
+        if (PushNotifications) {
+            const pperm = await PushNotifications.requestPermissions();
+            if (pperm.receive === "granted") {
+                await PushNotifications.register();
+                PushNotifications.addListener("registration", reg => {
+                    fcmToken = reg.value;
+                    console.log("Native FCM token:", fcmToken.slice(-8));
+                    saveFCMToken();
+                });
+                PushNotifications.addListener("registrationError", err => {
+                    console.warn("Push registration error:", err);
+                });
+                PushNotifications.addListener("pushNotificationReceived", notif => {
+                    // App is foreground — show toast
+                    showToast(notif.title || "TicTacToe", notif.body || "");
+                });
+                PushNotifications.addListener("pushNotificationActionPerformed", action => {
+                    const d = action.notification.data || {};
                     if (d.roomCode) {
                         goTo("nameScreen");
-                        setOpponent("online");
                         document.getElementById("roomCodeInput").value = d.roomCode;
                     }
                 });
             }
-        } catch(e) { console.warn("Native notif setup:", e); }
-    } else {
-        if (!("Notification" in window)) return;
-        let p = Notification.permission;
-        if (p === "default") p = await Notification.requestPermission();
-        notificationsAllowed = p === "granted";
+        }
+    } catch(e) { console.warn("Native notif setup failed:", e); }
+}
+
+// ── Web FCM ────────────────────────────────────────────────────
+async function setupWebFCM() {
+    if (!("Notification" in window)) return;
+
+    // Request permission — MUST be inside a user gesture
+    const perm = await Notification.requestPermission();
+    notificationsAllowed = perm === "granted";
+    if (!notificationsAllowed) return;
+
+    try {
+        // Register service worker
+        const swReg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+        console.log("SW registered");
+
+        // Get FCM token
+        const messaging = firebase.messaging();
+        fcmToken = await messaging.getToken({
+            vapidKey: VAPID_KEY,
+            serviceWorkerRegistration: swReg
+        });
+        console.log("Web FCM token:", fcmToken ? fcmToken.slice(-8) : "none");
+        saveFCMToken();
+
+        // Foreground message handler (tab is open)
+        messaging.onMessage(payload => {
+            const { title, body } = payload.notification || {};
+            showToast(title || "TicTacToe", body || "");
+        });
+
+        // Token refresh
+        messaging.onTokenRefresh(async () => {
+            fcmToken = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+            saveFCMToken();
+        });
+
+    } catch(e) {
+        console.warn("Web FCM setup failed:", e);
+        // Fallback: plain Notification API (no server push, only foreground)
     }
 }
 
-async function sendNotification(id, title, body, extra={}) {
+// ── Save FCM token to Firebase room ───────────────────────────
+// Called after token is obtained AND after joining a room.
+function saveFCMToken() {
+    if (!fcmToken || !gameRef || !mySymbol) return;
+    const field = mySymbol === "X" ? "fcmTokenX" : "fcmTokenO";
+    gameRef.update({ [field]: fcmToken })
+        .then(() => console.log("FCM token saved to room"))
+        .catch(e => console.warn("Could not save FCM token:", e));
+}
+
+// ── Local / foreground notification (fallback when tab is open) ─
+async function sendLocalNotification(id, title, body) {
     if (!notificationsAllowed) return;
+    if (document.visibilityState === "visible") {
+        showToast(title, body);
+        return;
+    }
     if (isNative()) {
         try {
             const { LocalNotifications } = Capacitor.Plugins;
             try { await LocalNotifications.cancel({ notifications:[{id}] }); } catch(e) {}
             await LocalNotifications.schedule({ notifications:[{
-                id, title, body, extra,
+                id, title, body,
                 schedule:{ at: new Date(Date.now()+300) },
                 sound:"default", smallIcon:"ic_launcher", channelId:"tictactoe"
             }]});
         } catch(e) {}
     } else {
-        if (document.visibilityState !== "visible") {
-            try {
-                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                    const sw = await navigator.serviceWorker.ready;
-                    sw.showNotification(title, { body, icon:"icon-192.png", tag:String(id), data:extra, vibrate:[200,100,200] });
-                } else {
-                    new Notification(title, { body, icon:"icon-192.png", tag:String(id) });
-                }
-            } catch(e) { try { new Notification(title,{body}); } catch(e2){} }
-        } else {
-            showToast(title, body);
+        // Service worker show (background tab)
+        try {
+            const sw = await navigator.serviceWorker.ready;
+            await sw.showNotification(title, {
+                body, icon:"/icon-192.png", badge:"/badge-72.png",
+                tag: String(id), vibrate:[200,100,200]
+            });
+        } catch(e) {
+            try { new Notification(title, { body }); } catch(e2) {}
         }
     }
 }
 
 async function cancelNotif(id) {
     if (!isNative()) return;
-    try { const {LocalNotifications}=Capacitor.Plugins; await LocalNotifications.cancel({notifications:[{id}]}); } catch(e){}
+    try {
+        const {LocalNotifications} = Capacitor.Plugins;
+        await LocalNotifications.cancel({ notifications:[{id}] });
+    } catch(e) {}
 }
 
+// ── Write push_request → Cloud Function picks it up ──────────
+// The Cloud Function reads the target's FCM token from the room
+// and calls FCM API server-side. This works even when target's
+// tab is closed or phone is locked.
 function writePushRequest(targetSym, id, title, body, extra={}) {
     if (!gameRef) return;
-    gameRef.child("push_request").set({ target:targetSym, id, title, body, extra, ts:Date.now() });
-}
-
-function listenForPushRequests(ref) {
-    ref.child("push_request").on("value", snap => {
-        const req = snap.val();
-        if (!req || req.target !== mySymbol) return;
-        sendNotification(req.id, req.title, req.body, req.extra||{});
-        ref.child("push_request").remove();
+    gameRef.child("push_request").set({
+        target: targetSym, id, title, body,
+        extra:  { ...extra },
+        ts:     Date.now()
     });
 }
 
-setupNotifications();
+// No longer needed — Cloud Function handles delivery.
+// Kept as a stub so existing call sites don't break.
+function listenForPushRequests() {}
+
+// Timer warning — local only (you're in the foreground by definition)
+function notifyTimerWarn() {
+    sendLocalNotification(NOTIF.TIMER_WARN, "⏰ 5 seconds left!", "Hurry! Make your move.");
+}
 
 // ── Toast ──────────────────────────────────────────────────────
 function showToast(title, body) {
@@ -387,7 +492,7 @@ function updateTimerUI(t) {
     const urg = t<=3;
     num.classList.toggle("urgent",urg);
     ring.classList.toggle("urgent",urg);
-    if (t===5) sendNotification(NOTIF.TIMER_WARN,"⏰ 5 seconds left!","Hurry! Make your move.");
+    if (t===5) notifyTimerWarn();
 }
 
 function autoSkipLocal() {
@@ -486,8 +591,10 @@ function handleOutcome(result) {
 
     if (result.winner==="draw") {
         drawWinLine(null);
-        setStatus("It's a Draw! 🤝");
+        setStatus("It's a Draw! 🤝  —  tap to continue");
         showRoundBanner("🤝","It's a Draw!", `Round ${roundNum}`, false);
+        // Tap anywhere on board or banner to start next round
+        enableTapToContinue();
     } else {
         drawWinLine(result.pattern);
         const winnerName = result.winner==="X" ? playerX : playerO;
@@ -524,6 +631,25 @@ function showRoundBanner(emoji, msg, sub, showNext) {
         document.getElementById("nextRoundBtn").style.display = "none";
         // Leave banner up; user hits Reset from menu
     }
+}
+
+function enableTapToContinue() {
+    // One-time tap on either the board or the banner dismisses and continues
+    const targets = [
+        document.getElementById("boardWrap"),
+        document.getElementById("roundBanner")
+    ];
+    function onTap() {
+        targets.forEach(t => t.removeEventListener("click", onTap));
+        if (seriesTarget > 1) {
+            nextRound();
+        } else {
+            // Classic — just reset the single game
+            document.getElementById("roundBanner").style.display = "none";
+            resetRound(false);
+        }
+    }
+    targets.forEach(t => t.addEventListener("click", onTap));
 }
 
 function nextRound() {
@@ -643,6 +769,9 @@ function resetRound(full=false) {
 //  START GAME (from name screen)
 // ══════════════════════════════════════════════════════════════
 function startGame() {
+    // User gesture — safe to request notification permission here
+    setupNotifications();
+
     playerX = document.getElementById("playerXInput").value.trim() || "Player X";
     playerO = opponentMode==="computer" ? "CPU"
             : (document.getElementById("playerOInput").value.trim() || "Player O");
@@ -665,6 +794,7 @@ function startGame() {
 //  ONLINE: CREATE / JOIN ROOM
 // ══════════════════════════════════════════════════════════════
 function createRoom() {
+    setupNotifications();   // user gesture
     playerX  = document.getElementById("playerXInput").value.trim() || "Player X";
     mySymbol = "X";
     roomCode = Math.random().toString(36).substring(2,8).toUpperCase();
@@ -697,6 +827,7 @@ function createRoom() {
             if (!d) return;
             if (d.status==="playing" && !isListening) {
                 playerO = d.playerO||"Opponent";
+                saveFCMToken();   // save token now that mySymbol and gameRef are set
                 _startOnlineGame();
             }
         });
@@ -704,6 +835,7 @@ function createRoom() {
 }
 
 function joinRoom() {
+    setupNotifications();   // user gesture
     const name = document.getElementById("playerXInput").value.trim();
     const code = document.getElementById("roomCodeInput").value.trim().toUpperCase();
     if (!code) { alert("Enter a room code!"); return; }
@@ -722,7 +854,10 @@ function joinRoom() {
         if (d.status!=="waiting") { alert("Room is full or already started."); return; }
         playerX = d.playerX||"Player X";
         return gameRef.update({ playerO:playerO, status:"playing" });
-    }).then(()=>_startOnlineGame())
+    }).then(()=>{
+        saveFCMToken();   // save token now that mySymbol and gameRef are set
+        _startOnlineGame();
+    })
     .catch(e=>alert("Connection error: "+e.message));
 }
 
@@ -742,7 +877,7 @@ function _startOnlineGame() {
     os.textContent   = `You are ${mySymbol} · Room: ${roomCode}`;
     os.className     = "online-status connected";
 
-    listenForPushRequests(gameRef);
+    listenForPushRequests(); // no-op — Cloud Function handles delivery now
 
     // Re-request notification permission after user interaction
     if (!isNative() && Notification.permission==="default") {
@@ -788,7 +923,7 @@ function _startOnlineGame() {
             setStatus(`Your turn (${mySymbol})`);
             cancelNotif(NOTIF.IDLE_REMIND);
             if (document.visibilityState!=="visible") {
-                sendNotification(NOTIF.YOUR_TURN,"Your turn! 🎮","Opponent played. Make your move!");
+                sendLocalNotification(NOTIF.YOUR_TURN,"Your turn! 🎮","Opponent played. Make your move!");
             }
         } else {
             setStatus(`Waiting for ${turn==="X"?playerX:playerO}…`);
